@@ -64,6 +64,34 @@ npm run test:coverage
 npm run deploy
 ```
 
+## CI/CD Pipelines
+
+This project includes comprehensive CI/CD pipelines with security gates:
+
+### Automated Testing (On Every PR)
+- ✅ TypeScript type checking
+- ✅ ESLint code linting
+- ✅ Full test suite with coverage
+- ✅ Dependency security scanning (npm audit)
+- ✅ Secret scanning (TruffleHog)
+- ✅ SSRF protection validation
+- ✅ Build verification
+- ✅ CodeQL security analysis
+- ✅ Dependency review
+
+### Deployment Strategy
+- **Staging**: Automatic deployment on merge to `main`
+- **Production**: Manual deployment with approval gates
+- **Rollback**: One-click rollback to previous version
+
+### Setup Instructions
+See [CI/CD Setup Guide](./.github/CICD_SETUP.md) for:
+- Required GitHub secrets configuration
+- Branch protection rules
+- Environment setup
+- Deployment process
+- Troubleshooting guide
+
 ## API Documentation
 
 ### Create Short URL
