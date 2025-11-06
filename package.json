@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run",
     "lint": "eslint src test",
     "type-check": "tsc --noEmit",
     "pre-push": "bash scripts/pre-push-check.sh"
@@ -26,7 +26,6 @@
     "@cloudflare/workers-types": "^4.20241127.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "@vitest/coverage-v8": "^2.1.0",
     "eslint": "^8.45.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0",

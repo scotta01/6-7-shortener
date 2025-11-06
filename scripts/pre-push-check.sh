@@ -45,7 +45,7 @@ run_check "TypeScript type checking" "npm run type-check" || true
 run_check "ESLint" "npm run lint" || true
 
 # 3. Tests
-run_check "Tests with coverage" "npm run test:coverage" || true
+run_check "Tests" "npm test" || true
 
 # 4. Security audit
 run_check "Security audit (npm audit)" "npm audit --audit-level=moderate" || true

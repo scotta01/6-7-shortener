@@ -98,7 +98,7 @@ jobs:
         run: npm install
 
       - name: Run full test suite
-        run: npm run test:coverage
+        run: npm test
 
       - name: Run security checks
         run: npm audit --audit-level=high

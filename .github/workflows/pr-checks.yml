@@ -49,24 +49,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests with coverage
-        run: npm run test:coverage
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/coverage-final.json
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-
-      - name: Check coverage thresholds
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "Coverage report generated successfully"
-            cat coverage/coverage-summary.json | grep -E '"(lines|statements|functions|branches)"' || true
-          fi
+      - name: Run tests
+        run: npm test
 
   # Security: Dependency scanning
   dependency-scan:

@@ -18,11 +18,10 @@ Runs on every pull request to `main`/`master` branches.
   - TypeScript type checking (`npm run type-check`)
   - ESLint code linting (`npm run lint`)
 
-- **Tests** - Full test suite with coverage
+- **Tests** - Full test suite
   - Runs unit and integration tests
-  - Generates coverage reports
-  - Uploads to Codecov (optional)
-  - Validates coverage thresholds
+  - Uses Cloudflare Workers test environment
+  - Note: Coverage reporting is not supported due to Cloudflare Workers limitations
 
 - **Dependency Security Scan**
   - Runs `npm audit` to check for vulnerable dependencies
@@ -116,12 +115,6 @@ Configure these secrets in your GitHub repository settings:
 
 2. **`CLOUDFLARE_ACCOUNT_ID`**
    - Find at: https://dash.cloudflare.com/ (in URL or sidebar)
-
-### Optional Secrets
-
-3. **`CODECOV_TOKEN`** (optional)
-   - For code coverage reporting
-   - Create at: https://codecov.io/
 
 ## Environment Configuration
 
@@ -356,8 +349,8 @@ npm run type-check
 # Linting
 npm run lint
 
-# Tests with coverage
-npm run test:coverage
+# Tests
+npm test
 
 # Security audit
 npm audit
