@@ -128,25 +128,26 @@ describe("generateUniqueShortCode", () => {
   });
 
   it("should throw after max retries exceeded", async () => {
-    // Fill storage with all possible codes (simulate worst case)
-    // For testing, we use a very small code length to make this feasible
+    // Create a mock storage that always reports codes as existing
+    // to force exhaustion of retry attempts
     const url = "https://example.com";
 
-    // Populate storage with codes
-    for (let i = 0; i < 10; i++) {
-      const code = generateShortCode(url, i, 4);
-      await storage.set(code, {
-        originalUrl: "https://taken.com",
-        shortCode: code,
-        createdAt: Date.now(),
-        visitCount: 0,
-        customCode: false,
-      });
-    }
+    // Mock storage that returns true for exists() to simulate all codes taken
+    const mockStorage = {
+      async exists(shortCode: string): Promise<boolean> {
+        return true; // Always return true to force collision
+      },
+      async set(shortCode: string, data: any): Promise<void> {},
+      async get(shortCode: string): Promise<any> {
+        return null;
+      },
+      async delete(shortCode: string): Promise<void> {},
+      async incrementStats(shortCode: string): Promise<void> {},
+    };
 
     // Should throw after retries
     await expect(
-      generateUniqueShortCode(url, storage, { codeLength: 4, maxRetries: 2 })
+      generateUniqueShortCode(url, mockStorage, { codeLength: 6, maxRetries: 3 })
     ).rejects.toThrow("Failed to generate unique short code");
   });
 });

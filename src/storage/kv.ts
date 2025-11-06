@@ -62,12 +62,8 @@ export class KVStorage implements URLStorage {
     try {
       const data: URLData = JSON.parse(value);
 
-      // Double-check expiration (KV should auto-delete, but be defensive)
-      if (this.isExpired(data)) {
-        await this.delete(shortCode);
-        return null;
-      }
-
+      // Return data even if expired - let the handler decide what to do
+      // This allows handlers to return appropriate status codes (410 vs 404)
       return data;
     } catch (error) {
       console.error(`Failed to parse URLData for ${shortCode}:`, error);

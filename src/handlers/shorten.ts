@@ -57,7 +57,13 @@ export async function handleShorten(
   }
 
   // Validate and sanitize URL
-  const sanitizedUrl = assertValidUrl(body.url);
+  let sanitizedUrl: string;
+  try {
+    sanitizedUrl = assertValidUrl(body.url);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid URL";
+    throw Errors.badRequest(message);
+  }
 
   // Determine short code
   let shortCode: string;
@@ -65,7 +71,12 @@ export async function handleShorten(
 
   if (body.customCode) {
     // Use custom code if provided
-    validateCustomCode(body.customCode);
+    try {
+      validateCustomCode(body.customCode);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid custom code";
+      throw Errors.badRequest(message);
+    }
 
     // Check if custom code already exists
     const exists = await storage.exists(body.customCode);
@@ -84,7 +95,7 @@ export async function handleShorten(
   const createdAt = Date.now();
   let expiresAt: number | undefined;
 
-  if (body.expiresIn && body.expiresIn > 0) {
+  if (body.expiresIn !== undefined && body.expiresIn !== 0) {
     expiresAt = createdAt + body.expiresIn * 1000;
   }
 

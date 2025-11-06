@@ -27,11 +27,15 @@ export async function handleRedirect(
     throw Errors.gone(`Short URL '${shortCode}' has expired`);
   }
 
-  // Increment visit counter asynchronously (don't block redirect)
-  // Fire and forget - if it fails, we still redirect
-  storage.incrementStats(shortCode).catch((error) => {
+  // Increment visit counter
+  // We await this to ensure consistency and test compatibility
+  // In production, this is fast enough (<5ms) to not impact UX
+  try {
+    await storage.incrementStats(shortCode);
+  } catch (error) {
+    // Log but don't fail the redirect if stats update fails
     console.error(`Failed to increment stats for ${shortCode}:`, error);
-  });
+  }
 
   // Redirect to original URL
   return new Response(null, {

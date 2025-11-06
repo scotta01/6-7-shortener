@@ -50,12 +50,8 @@ export class MemoryStorage implements URLStorage {
       return null;
     }
 
-    // Check expiration
-    if (this.isExpired(data)) {
-      await this.delete(shortCode);
-      return null;
-    }
-
+    // Return data even if expired - let the handler decide what to do
+    // The handler can check expiresAt and return appropriate status codes
     return { ...data }; // Clone to prevent external mutations
   }
 

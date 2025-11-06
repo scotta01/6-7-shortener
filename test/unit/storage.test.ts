@@ -118,23 +118,24 @@ describe("MemoryStorage", () => {
       expect(retrieved).toBeTruthy();
     });
 
-    it("should return null for expired data", async () => {
+    it("should return expired data (let handlers decide what to do)", async () => {
       const data = createTestData("abc123");
       data.expiresAt = Date.now() - 1000; // 1 second in past
       await storage.set("abc123", data);
 
       const retrieved = await storage.get("abc123");
-      expect(retrieved).toBeNull();
+      expect(retrieved).toBeTruthy();
+      expect(retrieved?.expiresAt).toBeLessThan(Date.now());
     });
 
-    it("should auto-delete expired data on get", async () => {
+    it("should not auto-delete expired data on get", async () => {
       const data = createTestData("abc123");
       data.expiresAt = Date.now() - 1000;
       await storage.set("abc123", data);
 
-      await storage.get("abc123"); // Should trigger deletion
+      await storage.get("abc123"); // Should NOT trigger deletion
 
-      expect(await storage.exists("abc123")).toBe(false);
+      expect(await storage.exists("abc123")).toBe(true);
     });
 
     it("should handle data without expiration", async () => {
