@@ -136,14 +136,14 @@ export default {
       }
 
       // Route: POST /api/domains/:domain/verify - Verify domain
-      const verifyMatch = path.match(/^\/api\/domains\/([^\/]+)\/verify$/);
+      const verifyMatch = path.match(/^\/api\/domains\/([^/]+)\/verify$/);
       if (request.method === "POST" && verifyMatch) {
         const domain = decodeURIComponent(verifyMatch[1]);
         return await handleVerifyDomain(domain, domainStorage);
       }
 
       // Route: DELETE /api/domains/:domain - Delete domain
-      const deleteDomainMatch = path.match(/^\/api\/domains\/([^\/]+)$/);
+      const deleteDomainMatch = path.match(/^\/api\/domains\/([^/]+)$/);
       if (request.method === "DELETE" && deleteDomainMatch) {
         const domain = decodeURIComponent(deleteDomainMatch[1]);
         const authResult = await authenticate(request, apiKeyStorage, ["domains"]);
