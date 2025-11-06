@@ -16,3 +16,13 @@ export {
   createRateLimitHeaders,
   type RateLimitConfig,
 } from "./ratelimit";
+
+export {
+  authenticate,
+  KVAPIKeyStorage,
+  handleCreateAPIKey,
+  handleRevokeAPIKey,
+  handleListAPIKeys,
+  type APIKeyStorage,
+  type APIKeyData,
+} from "./auth";
