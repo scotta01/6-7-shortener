@@ -6,6 +6,12 @@ This URL shortener is designed with a **platform-agnostic storage interface** to
 - **Current**: Cloudflare Workers + KV Store (serverless, edge-deployed)
 - **Future**: Go + Docker + Redis (self-hosted, traditional backend)
 
+The service includes a comprehensive feature set:
+- **Core Features**: URL shortening, custom codes, expiration, analytics
+- **Advanced Features**: QR code generation, link previews, bulk operations
+- **Enterprise Features**: API key authentication, custom domains, A/B testing, geographic routing
+- **Developer Tools**: Visual dashboard, comprehensive API, CI/CD pipelines
+
 ## Core Design Principles
 
 1. **Storage Abstraction**: All storage operations go through a well-defined interface
@@ -158,6 +164,189 @@ Health check endpoint.
    - Prevent SQL injection (though we use KV/Redis)
    - Prevent XSS in error messages
 
+## Implemented Advanced Features
+
+### 1. Analytics Dashboard
+**Path**: `/dashboard`
+**Implementation**: Static HTML/CSS/JS served from Workers
+- Real-time statistics display
+- Visual charts and graphs
+- URL performance metrics
+- No external dependencies
+
+### 2. QR Code Generation
+**Paths**: `/:shortCode/qr`
+**Implementation**: Dual format support
+- **PNG**: External API integration (QR Server API)
+- **SVG**: Custom generator using embedded QR algorithm
+- Configurable size (100-1000px)
+- Cached for performance
+
+### 3. Link Preview (Open Graph)
+**Paths**: `/:shortCode/preview`, `/:shortCode/card`
+**Implementation**: Metadata fetching and caching
+- Fetch OG tags from original URLs
+- Cache metadata in KV store (24hr TTL)
+- HTML preview card with auto-redirect
+- Fallback for missing metadata
+
+**Storage Schema**:
+```
+preview:abc123 → {
+  title, description, image, siteName,
+  cachedAt, originalUrl
+}
+```
+
+### 4. Bulk URL Shortening
+**Path**: `POST /api/bulk/shorten`
+**Implementation**: Batch processing with validation
+- Process up to 100 URLs per request
+- Individual error handling per URL
+- Atomic operations per URL
+- Summary statistics
+
+**Request/Response**:
+- Accepts array of URL objects
+- Returns array of results with success/failure status
+- Continues processing on individual failures
+
+### 5. API Key Authentication
+**Paths**: `/api/keys`, `/api/keys/:keyId`
+**Implementation**: Token-based authentication system
+- Master API key for key management
+- Per-key permissions system
+- Bearer token and X-API-Key header support
+- Optional enforcement (API_KEY_REQUIRED flag)
+
+**Storage Schema**:
+```
+apikey:key_abc123 → {
+  id, name, permissions[], createdAt,
+  expiresAt, lastUsed, createdBy
+}
+```
+
+**Permissions**:
+- `shorten`: Create short URLs
+- `stats`: View statistics
+- `delete`: Delete URLs
+- `bulk`: Bulk operations
+- `domains`: Manage domains
+- `abtest`: A/B testing
+- `georoute`: Geographic routing
+
+### 6. Custom Domains per User
+**Paths**: `/api/domains`, `/api/domains/:domain/verify`
+**Implementation**: DNS-based domain verification
+- TXT record verification
+- Domain ownership validation
+- Status tracking (pending/verified/failed)
+- Per-domain routing support
+
+**Storage Schema**:
+```
+domain:go.example.com → {
+  domain, userId, status, verificationToken,
+  verifiedAt, sslEnabled, createdAt
+}
+```
+
+**Verification Flow**:
+1. User registers domain
+2. System generates verification token
+3. User adds TXT record to DNS
+4. System verifies DNS record
+5. Domain activated for short URLs
+
+### 7. A/B Testing for Redirects
+**Paths**: `/api/abtest`, `/api/abtest/:shortCode/stats`
+**Implementation**: Weighted random distribution
+- Multiple destination URLs per short code
+- Configurable weights per variant
+- Visit tracking per variant
+- Statistical analysis
+
+**Storage Schema**:
+```
+abtest:test-link → {
+  shortCode, name, variants[],
+  createdAt, expiresAt, totalVisits
+}
+
+variants: [{
+  id, url, weight, visits
+}]
+```
+
+**Algorithm**:
+1. Sum all variant weights
+2. Generate random number [0, sum)
+3. Select variant based on weight ranges
+4. Redirect and increment variant counter
+
+### 8. Geographic Routing
+**Paths**: `/api/georoute`, `/api/georoute/:shortCode/stats`
+**Implementation**: Cloudflare Workers geo data
+- Access to `request.cf.country` and `request.cf.continent`
+- Rule-based routing by country/continent/region
+- Default fallback URL
+- Geographic analytics
+
+**Storage Schema**:
+```
+georoute:global-promo → {
+  shortCode, name, rules[], defaultUrl,
+  createdAt, expiresAt, visitsByCountry{},
+  visitsByContinent{}
+}
+
+rules: [{
+  id, type, value, url
+}]
+```
+
+**Rule Types**:
+- `country`: ISO country code (US, GB, etc.)
+- `continent`: Continent code (NA, EU, AS, etc.)
+- `region`: Custom regions (future)
+
+**Routing Algorithm**:
+1. Extract geo data from request
+2. Evaluate rules in order
+3. Return first matching URL
+4. Fall back to default URL
+5. Track visit by location
+
+## CI/CD and Security
+
+### Automated Pipelines
+**Location**: `.github/workflows/`
+
+**Pre-merge Checks** (on every PR):
+- TypeScript type checking
+- ESLint linting
+- Full test suite
+- Dependency security audit (npm audit)
+- Secret scanning (TruffleHog)
+- SSRF protection validation
+- Build verification
+- CodeQL security analysis
+- Dependency review
+
+**Deployment Strategy**:
+- **Staging**: Auto-deploy on merge to `main`
+- **Production**: Manual approval required
+- **Rollback**: One-click revert capability
+
+### Security Gates
+1. **Code Quality**: Must pass type-check and lint
+2. **Test Coverage**: All tests must pass
+3. **Dependency Security**: No high/critical vulnerabilities
+4. **Secret Detection**: No exposed credentials
+5. **Code Analysis**: CodeQL security scanning
+6. **Build Success**: Must build without errors
+
 ## Migration Path: Cloudflare → Go
 
 When migrating to Go + Docker:
@@ -183,8 +372,13 @@ url:abc123 → JSON{ originalUrl, createdAt, ... }
 /
 ├── ARCHITECTURE.md          # This file
 ├── README.md               # User-facing documentation
+├── .github/
+│   └── workflows/          # CI/CD pipelines
+│       ├── ci.yml          # Continuous integration
+│       ├── security.yml    # Security scanning
+│       └── deploy.yml      # Deployment workflow
 ├── src/
-│   ├── index.ts           # Worker entry point
+│   ├── index.ts           # Worker entry point & routing
 │   ├── storage/
 │   │   ├── interface.ts   # Storage interface definition
 │   │   └── kv.ts          # KV implementation
@@ -194,10 +388,21 @@ url:abc123 → JSON{ originalUrl, createdAt, ... }
 │   ├── handlers/
 │   │   ├── shorten.ts     # POST /shorten
 │   │   ├── redirect.ts    # GET /:shortCode
-│   │   └── stats.ts       # GET /api/stats/:shortCode
+│   │   ├── stats.ts       # GET /api/stats/:shortCode
+│   │   ├── health.ts      # GET /health
+│   │   ├── dashboard.ts   # GET /dashboard (analytics)
+│   │   ├── qrcode.ts      # GET /:shortCode/qr
+│   │   ├── preview.ts     # GET /:shortCode/preview
+│   │   ├── bulk.ts        # POST /api/bulk/shorten
+│   │   ├── domains.ts     # Custom domain management
+│   │   ├── abtest.ts      # A/B testing
+│   │   ├── georoute.ts    # Geographic routing
+│   │   └── index.ts       # Handler exports
 │   └── middleware/
+│       ├── auth.ts        # API key authentication
 │       ├── ratelimit.ts   # Rate limiting
-│       └── errors.ts      # Error handling
+│       ├── errors.ts      # Error handling
+│       └── index.ts       # Middleware exports
 ├── test/
 │   ├── unit/              # Unit tests
 │   └── integration/       # Integration tests
@@ -287,13 +492,29 @@ RATE_LIMIT=100
 ENVIRONMENT=production
 ```
 
+## Implemented Enhancements
+
+- [x] Analytics dashboard (visual HTML dashboard)
+- [x] QR code generation (PNG and SVG formats)
+- [x] Link preview (Open Graph metadata)
+- [x] Bulk URL shortening (up to 100 URLs)
+- [x] API key authentication (permission-based)
+- [x] Custom domains (DNS verification)
+- [x] A/B testing for redirects (weighted distribution)
+- [x] Geographic routing (country/continent-based)
+- [x] CI/CD pipelines (security gates)
+
 ## Future Enhancements
 
-- [ ] Analytics dashboard
-- [ ] QR code generation
-- [ ] Link preview (Open Graph)
-- [ ] Bulk URL shortening
-- [ ] API authentication
-- [ ] Custom domains
-- [ ] A/B testing for redirects
-- [ ] Geographic routing
+Potential next-generation features:
+
+- [ ] Mobile app for URL management
+- [ ] Browser extension integration
+- [ ] Webhooks for URL events
+- [ ] Advanced analytics (conversion tracking, funnels)
+- [ ] URL expiration notifications
+- [ ] Scheduled URL activation
+- [ ] Link rotation (time-based)
+- [ ] Password-protected URLs
+- [ ] Real-time collaboration features
+- [ ] GraphQL API support

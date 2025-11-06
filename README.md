@@ -7,9 +7,17 @@ A lightweight, high-performance URL shortener built on Cloudflare Workers with a
 - **Serverless & Fast**: Deployed on Cloudflare's edge network for sub-20ms redirects globally
 - **Custom Short Codes**: Support for user-defined short codes
 - **URL Expiration**: Set TTL for temporary links
-- **Analytics**: Track visit counts and metadata
+- **Analytics Dashboard**: Visual dashboard with charts and real-time URL analytics
+- **QR Code Generation**: Generate QR codes in PNG or SVG format for any short URL
+- **Link Preview**: Fetch and display Open Graph metadata with preview cards
+- **Bulk URL Shortening**: Process up to 100 URLs in a single request
+- **API Key Authentication**: Secure API access with permission-based access control
+- **Custom Domains**: Support for custom domains per user with DNS verification
+- **A/B Testing**: Route traffic to multiple destinations with weighted distribution
+- **Geographic Routing**: Route users based on country, continent, or region
 - **Security**: Built-in SSRF protection, rate limiting, and input validation
 - **Comprehensive Testing**: Unit and integration tests using Cloudflare Workers environment
+- **CI/CD Pipelines**: Automated testing, security scanning, and deployment workflows
 - **Future-Proof Architecture**: Designed for easy migration to Go + Redis
 
 ## Quick Start
@@ -180,6 +188,437 @@ Check service health.
   "environment": "production"
 }
 ```
+
+### Analytics Dashboard
+
+**GET** `/dashboard`
+
+View a visual analytics dashboard with charts and statistics for all short URLs.
+
+**Response:** HTML page with interactive dashboard
+
+### Generate QR Code
+
+**GET** `/:shortCode/qr`
+
+Generate a QR code for a short URL.
+
+**Query Parameters:**
+- `format`: `png` (default) or `svg`
+- `size`: Image size in pixels (100-1000, default: 300)
+
+**Response:**
+- `200 OK` - Returns QR code image (PNG or SVG)
+- `404 Not Found` - Short code doesn't exist
+
+**Example:**
+```bash
+# Get PNG QR code
+curl https://your-worker.workers.dev/abc123/qr?format=png&size=400
+
+# Get SVG QR code
+curl https://your-worker.workers.dev/abc123/qr?format=svg
+```
+
+### Get Link Preview
+
+**GET** `/:shortCode/preview`
+
+Get Open Graph metadata for a short URL.
+
+**Response (200 OK):**
+```json
+{
+  "shortCode": "abc123",
+  "originalUrl": "https://example.com",
+  "metadata": {
+    "title": "Example Domain",
+    "description": "Example website description",
+    "image": "https://example.com/image.jpg",
+    "siteName": "Example"
+  },
+  "cachedAt": 1699564800000
+}
+```
+
+**GET** `/:shortCode/card`
+
+View a preview card page that displays the link preview and auto-redirects after 2 seconds.
+
+**Response:** HTML preview card page
+
+### Bulk URL Shortening
+
+**POST** `/api/bulk/shorten`
+
+Shorten multiple URLs in a single request (up to 100 URLs).
+
+**Authentication:** Optional (if API_KEY_REQUIRED is enabled, requires API key)
+
+**Request:**
+```json
+{
+  "urls": [
+    {
+      "url": "https://example.com/page1",
+      "customCode": "page1",
+      "expiresIn": 86400
+    },
+    {
+      "url": "https://example.com/page2"
+    }
+  ]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "results": [
+    {
+      "success": true,
+      "shortCode": "page1",
+      "shortUrl": "https://short.link/page1",
+      "originalUrl": "https://example.com/page1"
+    },
+    {
+      "success": true,
+      "shortCode": "xyz789",
+      "shortUrl": "https://short.link/xyz789",
+      "originalUrl": "https://example.com/page2"
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "successful": 2,
+    "failed": 0
+  }
+}
+```
+
+### API Key Management
+
+#### Create API Key
+
+**POST** `/api/keys`
+
+Create a new API key (requires master API key).
+
+**Authentication:** Master API Key required
+
+**Request:**
+```json
+{
+  "name": "My App",
+  "permissions": ["shorten", "stats", "delete"],
+  "expiresIn": 2592000
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "apiKey": "key_abc123xyz789",
+  "name": "My App",
+  "permissions": ["shorten", "stats", "delete"],
+  "createdAt": 1699564800000,
+  "expiresAt": 1702156800000
+}
+```
+
+#### List API Keys
+
+**GET** `/api/keys`
+
+List all API keys (requires master API key).
+
+**Authentication:** Master API Key required
+
+**Response (200 OK):**
+```json
+{
+  "keys": [
+    {
+      "id": "key_abc123",
+      "name": "My App",
+      "permissions": ["shorten", "stats"],
+      "createdAt": 1699564800000,
+      "lastUsed": 1699568400000
+    }
+  ]
+}
+```
+
+#### Revoke API Key
+
+**DELETE** `/api/keys/:keyId`
+
+Revoke an API key (requires master API key).
+
+**Authentication:** Master API Key required
+
+**Response:** `204 No Content`
+
+### Custom Domain Management
+
+#### Register Domain
+
+**POST** `/api/domains`
+
+Register a custom domain (requires API key with domain permissions).
+
+**Authentication:** API Key required
+
+**Request:**
+```json
+{
+  "domain": "go.example.com",
+  "verificationMethod": "dns"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "domain": "go.example.com",
+  "status": "pending",
+  "verificationToken": "verify_abc123",
+  "verificationRecord": {
+    "type": "TXT",
+    "name": "_url-shortener-verify",
+    "value": "verify_abc123"
+  }
+}
+```
+
+#### Verify Domain
+
+**POST** `/api/domains/:domain/verify`
+
+Verify domain ownership.
+
+**Authentication:** API Key required
+
+**Response (200 OK):**
+```json
+{
+  "domain": "go.example.com",
+  "status": "verified",
+  "verifiedAt": 1699564800000
+}
+```
+
+#### List Domains
+
+**GET** `/api/domains`
+
+List all custom domains for the authenticated user.
+
+**Authentication:** API Key required
+
+### A/B Testing
+
+#### Create A/B Test
+
+**POST** `/api/abtest`
+
+Create an A/B test with multiple destination URLs.
+
+**Authentication:** Optional (if API_KEY_REQUIRED is enabled, requires API key)
+
+**Request:**
+```json
+{
+  "shortCode": "test-link",
+  "name": "Landing Page Test",
+  "variants": [
+    {
+      "url": "https://example.com/landing-a",
+      "weight": 50
+    },
+    {
+      "url": "https://example.com/landing-b",
+      "weight": 50
+    }
+  ],
+  "expiresIn": 604800
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "shortCode": "test-link",
+  "shortUrl": "https://short.link/test-link",
+  "name": "Landing Page Test",
+  "variants": [
+    {
+      "id": "var_1",
+      "url": "https://example.com/landing-a",
+      "weight": 50
+    },
+    {
+      "id": "var_2",
+      "url": "https://example.com/landing-b",
+      "weight": 50
+    }
+  ],
+  "createdAt": 1699564800000
+}
+```
+
+#### Get A/B Test Statistics
+
+**GET** `/api/abtest/:shortCode/stats`
+
+Get detailed statistics for an A/B test.
+
+**Response (200 OK):**
+```json
+{
+  "shortCode": "test-link",
+  "name": "Landing Page Test",
+  "totalVisits": 1000,
+  "variants": [
+    {
+      "id": "var_1",
+      "url": "https://example.com/landing-a",
+      "weight": 50,
+      "visits": 503
+    },
+    {
+      "id": "var_2",
+      "url": "https://example.com/landing-b",
+      "weight": 50,
+      "visits": 497
+    }
+  ]
+}
+```
+
+### Geographic Routing
+
+#### Create Geographic Route
+
+**POST** `/api/georoute`
+
+Create a short URL with geographic routing rules.
+
+**Authentication:** Optional (if API_KEY_REQUIRED is enabled, requires API key)
+
+**Request:**
+```json
+{
+  "shortCode": "global-promo",
+  "name": "Global Promotion",
+  "rules": [
+    {
+      "type": "country",
+      "value": "US",
+      "url": "https://example.com/us"
+    },
+    {
+      "type": "continent",
+      "value": "EU",
+      "url": "https://example.com/eu"
+    }
+  ],
+  "defaultUrl": "https://example.com/global",
+  "expiresIn": 2592000
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "shortCode": "global-promo",
+  "shortUrl": "https://short.link/global-promo",
+  "name": "Global Promotion",
+  "rules": [
+    {
+      "id": "rule_1",
+      "type": "country",
+      "value": "US",
+      "url": "https://example.com/us"
+    },
+    {
+      "id": "rule_2",
+      "type": "continent",
+      "value": "EU",
+      "url": "https://example.com/eu"
+    }
+  ],
+  "defaultUrl": "https://example.com/global"
+}
+```
+
+#### Get Geographic Statistics
+
+**GET** `/api/georoute/:shortCode/stats`
+
+Get geographic distribution statistics.
+
+**Response (200 OK):**
+```json
+{
+  "shortCode": "global-promo",
+  "totalVisits": 5000,
+  "byCountry": {
+    "US": 2000,
+    "GB": 800,
+    "DE": 600,
+    "FR": 500,
+    "other": 1100
+  },
+  "byContinent": {
+    "NA": 2200,
+    "EU": 2300,
+    "AS": 400,
+    "other": 100
+  }
+}
+```
+
+## Authentication
+
+This service supports optional API key authentication for enhanced security.
+
+### Configuration
+
+Set the following environment variables in `wrangler.toml`:
+
+```toml
+[vars]
+MASTER_API_KEY = "your-master-key-here"  # For managing API keys
+API_KEY_REQUIRED = "false"               # Set to "true" to require API keys
+```
+
+### Using API Keys
+
+Include your API key in requests using either method:
+
+**Bearer Token:**
+```bash
+curl -H "Authorization: Bearer your-api-key" \
+  https://your-worker.workers.dev/shorten
+```
+
+**X-API-Key Header:**
+```bash
+curl -H "X-API-Key: your-api-key" \
+  https://your-worker.workers.dev/shorten
+```
+
+### Permissions
+
+API keys can have the following permissions:
+- `shorten`: Create short URLs
+- `stats`: View statistics
+- `delete`: Delete short URLs
+- `bulk`: Use bulk operations
+- `domains`: Manage custom domains
+- `abtest`: Create A/B tests
+- `georoute`: Create geographic routes
 
 ## Configuration
 
@@ -356,14 +795,16 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed migration guide.
 
 ## Future Enhancements
 
-- [ ] Analytics dashboard
-- [ ] QR code generation
-- [ ] Link preview (Open Graph)
-- [ ] Bulk URL shortening API
-- [ ] API key authentication
-- [ ] Custom domains per user
-- [ ] A/B testing for redirects
-- [ ] Geographic routing
+All major features have been implemented! Potential future enhancements:
+
+- [ ] Mobile app for URL management
+- [ ] Browser extension for quick shortening
+- [ ] Webhooks for URL events
+- [ ] Advanced analytics (conversion tracking, funnel analysis)
+- [ ] URL expiration notifications
+- [ ] Scheduled URL activation
+- [ ] Link rotation (time-based redirects)
+- [ ] Password-protected URLs
 
 ## Contributing
 
