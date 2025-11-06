@@ -11,12 +11,10 @@ import type { URLData, URLStorage, StorageConfig } from "./interface";
  */
 export class KVStorage implements URLStorage {
   private kv: KVNamespace;
-  private config: StorageConfig;
   private keyPrefix: string;
 
   constructor(kv: KVNamespace, config: StorageConfig = { defaultTTL: 0 }) {
     this.kv = kv;
-    this.config = config;
     this.keyPrefix = config.keyPrefix || "url:";
   }
 
@@ -25,14 +23,6 @@ export class KVStorage implements URLStorage {
    */
   private getKey(shortCode: string): string {
     return `${this.keyPrefix}${shortCode}`;
-  }
-
-  /**
-   * Check if a URL has expired
-   */
-  private isExpired(data: URLData): boolean {
-    if (!data.expiresAt) return false;
-    return Date.now() > data.expiresAt;
   }
 
   async set(shortCode: string, data: URLData): Promise<void> {

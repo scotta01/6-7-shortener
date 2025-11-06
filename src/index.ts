@@ -49,7 +49,7 @@ function parseConfig(env: Env): {
  * Main request handler
  */
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx?: ExecutionContext): Promise<Response> {
     try {
       // Parse configuration
       const config = parseConfig(env);
