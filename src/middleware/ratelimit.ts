@@ -1,5 +1,3 @@
-import { Errors } from "./errors";
-
 /**
  * Rate limiting configuration
  */

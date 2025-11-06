@@ -9,7 +9,7 @@ A lightweight, high-performance URL shortener built on Cloudflare Workers with a
 - **URL Expiration**: Set TTL for temporary links
 - **Analytics**: Track visit counts and metadata
 - **Security**: Built-in SSRF protection, rate limiting, and input validation
-- **100% Test Coverage**: Comprehensive unit and integration tests
+- **Comprehensive Testing**: Unit and integration tests using Cloudflare Workers environment
 - **Future-Proof Architecture**: Designed for easy migration to Go + Redis
 
 ## Quick Start
@@ -52,9 +52,6 @@ npm test
 
 # Run tests in watch mode
 npm run test:watch
-
-# Run with coverage
-npm run test:coverage
 ```
 
 ### Deployment
@@ -63,6 +60,34 @@ npm run test:coverage
 # Deploy to Cloudflare Workers
 npm run deploy
 ```
+
+## CI/CD Pipelines
+
+This project includes comprehensive CI/CD pipelines with security gates:
+
+### Automated Testing (On Every PR)
+- ✅ TypeScript type checking
+- ✅ ESLint code linting
+- ✅ Full test suite
+- ✅ Dependency security scanning (npm audit)
+- ✅ Secret scanning (TruffleHog)
+- ✅ SSRF protection validation
+- ✅ Build verification
+- ✅ CodeQL security analysis
+- ✅ Dependency review
+
+### Deployment Strategy
+- **Staging**: Automatic deployment on merge to `main`
+- **Production**: Manual deployment with approval gates
+- **Rollback**: One-click rollback to previous version
+
+### Setup Instructions
+See [CI/CD Setup Guide](./.github/CICD_SETUP.md) for:
+- Required GitHub secrets configuration
+- Branch protection rules
+- Environment setup
+- Deployment process
+- Troubleshooting guide
 
 ## API Documentation
 
@@ -270,9 +295,6 @@ npm test test/unit
 
 # Integration tests only
 npm test test/integration
-
-# With coverage
-npm run test:coverage
 ```
 
 ### Type Checking
@@ -350,7 +372,6 @@ Contributions are welcome! Please ensure:
 1. All tests pass (`npm test`)
 2. Code is properly typed (`npm run type-check`)
 3. Code follows style guide (`npm run lint`)
-4. Test coverage remains > 80%
 
 ## License
 

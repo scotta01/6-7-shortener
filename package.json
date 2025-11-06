@@ -8,9 +8,10 @@
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run",
     "lint": "eslint src test",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "pre-push": "bash scripts/pre-push-check.sh"
   },
   "keywords": [
     "url-shortener",

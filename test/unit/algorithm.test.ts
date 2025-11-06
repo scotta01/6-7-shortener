@@ -134,15 +134,15 @@ describe("generateUniqueShortCode", () => {
 
     // Mock storage that returns true for exists() to simulate all codes taken
     const mockStorage = {
-      async exists(shortCode: string): Promise<boolean> {
+      async exists(_shortCode: string): Promise<boolean> {
         return true; // Always return true to force collision
       },
-      async set(shortCode: string, data: any): Promise<void> {},
-      async get(shortCode: string): Promise<any> {
+      async set(_shortCode: string, _data: any): Promise<void> {},
+      async get(_shortCode: string): Promise<any> {
         return null;
       },
-      async delete(shortCode: string): Promise<void> {},
-      async incrementStats(shortCode: string): Promise<void> {},
+      async delete(_shortCode: string): Promise<void> {},
+      async incrementStats(_shortCode: string): Promise<void> {},
     };
 
     // Should throw after retries

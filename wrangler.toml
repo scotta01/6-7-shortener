@@ -26,10 +26,20 @@ ENVIRONMENT = "development"
 port = 8787
 local_protocol = "http"
 
-# Production deployment configuration
-# Uncomment and configure for production
-# [env.production]
-# vars = { BASE_URL = "https://yourdomain.com", ENVIRONMENT = "production" }
-# [[env.production.kv_namespaces]]
-# binding = "URL_STORE"
-# id = "your_production_kv_id"
+# Staging environment
+[env.staging]
+name = "url-shortener-staging"
+vars = { BASE_URL = "https://staging.your-domain.com", ENVIRONMENT = "staging", RATE_LIMIT = "50" }
+
+[[env.staging.kv_namespaces]]
+binding = "URL_STORE"
+id = "staging_kv_id"  # Create with: wrangler kv:namespace create URL_STORE --env staging
+
+# Production environment
+[env.production]
+name = "url-shortener-production"
+vars = { BASE_URL = "https://your-domain.com", ENVIRONMENT = "production", RATE_LIMIT = "200" }
+
+[[env.production.kv_namespaces]]
+binding = "URL_STORE"
+id = "production_kv_id"  # Create with: wrangler kv:namespace create URL_STORE --env production

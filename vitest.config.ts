@@ -8,15 +8,5 @@ export default defineWorkersConfig({
         wrangler: { configPath: "./wrangler.toml" },
       },
     },
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "json", "html"],
-      exclude: [
-        "node_modules/**",
-        "test/**",
-        "dist/**",
-        "**/*.config.ts",
-      ],
-    },
   },
 });

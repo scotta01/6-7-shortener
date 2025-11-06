@@ -13,12 +13,10 @@ import type { URLData, URLStorage, StorageConfig } from "./interface";
  */
 export class MemoryStorage implements URLStorage {
   private store: Map<string, URLData>;
-  private config: StorageConfig;
   private keyPrefix: string;
 
   constructor(config: StorageConfig = { defaultTTL: 0 }) {
     this.store = new Map();
-    this.config = config;
     this.keyPrefix = config.keyPrefix || "url:";
   }
 
@@ -27,14 +25,6 @@ export class MemoryStorage implements URLStorage {
    */
   private getKey(shortCode: string): string {
     return `${this.keyPrefix}${shortCode}`;
-  }
-
-  /**
-   * Check if a URL has expired
-   */
-  private isExpired(data: URLData): boolean {
-    if (!data.expiresAt) return false;
-    return Date.now() > data.expiresAt;
   }
 
   async set(shortCode: string, data: URLData): Promise<void> {
