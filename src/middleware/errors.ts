@@ -100,6 +100,12 @@ export const Errors = {
   badRequest: (message: string, details?: unknown) =>
     new HTTPError(400, message, details),
 
+  unauthorized: (message: string = "Unauthorized") =>
+    new HTTPError(401, message),
+
+  forbidden: (message: string = "Forbidden") =>
+    new HTTPError(403, message),
+
   notFound: (message: string = "Resource not found") =>
     new HTTPError(404, message),
 
@@ -110,5 +116,8 @@ export const Errors = {
     new HTTPError(429, message),
 
   internalServerError: (message: string = "Internal server error") =>
+    new HTTPError(500, message),
+
+  internalError: (message: string = "Internal server error") =>
     new HTTPError(500, message),
 };
