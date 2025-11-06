@@ -1,0 +1,428 @@
+openapi: 3.0.3
+info:
+  title: URL Shortener API
+  description: |
+    A lightweight, high-performance URL shortener built on Cloudflare Workers.
+
+    Features:
+    - Create short URLs with optional custom codes
+    - Set expiration times for temporary links
+    - Track visit analytics
+    - SSRF protection and security validation
+    - Rate limiting
+
+    **Architecture**: Designed with storage abstraction for easy migration to Go + Docker + Redis.
+  version: 1.0.0
+  contact:
+    name: API Support
+    url: https://github.com/yourusername/url-shortener
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8787
+    description: Local development server
+  - url: https://your-worker.workers.dev
+    description: Cloudflare Workers deployment
+
+tags:
+  - name: URLs
+    description: URL shortening operations
+  - name: Analytics
+    description: URL statistics and analytics
+  - name: Health
+    description: Service health monitoring
+
+paths:
+  /shorten:
+    post:
+      tags:
+        - URLs
+      summary: Create a short URL
+      description: |
+        Creates a new short URL from a long URL. Supports optional custom codes and expiration times.
+
+        **Rate Limit**: 100 requests per minute per IP (configurable)
+      operationId: shortenUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortenRequest'
+            examples:
+              basic:
+                summary: Basic URL shortening
+                value:
+                  url: https://example.com/very/long/path/to/resource
+              withCustomCode:
+                summary: With custom short code
+                value:
+                  url: https://example.com
+                  customCode: my-link
+              withExpiration:
+                summary: With expiration (24 hours)
+                value:
+                  url: https://example.com
+                  expiresIn: 86400
+              full:
+                summary: Full example with all options
+                value:
+                  url: https://example.com/long/url
+                  customCode: promo2024
+                  expiresIn: 604800
+      responses:
+        '201':
+          description: Short URL created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShortenResponse'
+              example:
+                shortCode: abc123
+                shortUrl: https://short.link/abc123
+                originalUrl: https://example.com/very/long/path
+                createdAt: 1699564800000
+                expiresAt: 1699651200000
+        '400':
+          description: Bad request - Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidUrl:
+                  summary: Invalid URL format
+                  value:
+                    error: Bad Request
+                    message: Invalid URL format
+                    statusCode: 400
+                localhost:
+                  summary: Localhost not allowed
+                  value:
+                    error: Bad Request
+                    message: URLs pointing to private or local addresses are not allowed
+                    statusCode: 400
+                duplicateCode:
+                  summary: Custom code already in use
+                  value:
+                    error: Bad Request
+                    message: Custom code 'my-link' is already in use
+                    statusCode: 400
+                reserved:
+                  summary: Reserved keyword
+                  value:
+                    error: Bad Request
+                    message: Custom code 'api' is reserved
+                    statusCode: 400
+        '429':
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until rate limit resets
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Maximum requests per window
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: Remaining requests in current window
+            X-RateLimit-Reset:
+              schema:
+                type: integer
+              description: Unix timestamp when limit resets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Too Many Requests
+                message: Rate limit exceeded. Try again in 45 seconds.
+                statusCode: 429
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /{shortCode}:
+    get:
+      tags:
+        - URLs
+      summary: Redirect to original URL
+      description: |
+        Redirects to the original URL associated with the short code.
+        Increments the visit counter for analytics.
+      operationId: redirect
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          description: The short code identifier
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: abc123
+      responses:
+        '302':
+          description: Redirect to original URL
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The original URL
+              example: https://example.com/very/long/path
+            Cache-Control:
+              schema:
+                type: string
+              description: Cache control directive
+              example: no-cache, no-store, must-revalidate
+        '404':
+          description: Short URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Not Found
+                message: Short URL 'xyz789' not found
+                statusCode: 404
+        '410':
+          description: Short URL has expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Gone
+                message: Short URL 'abc123' has expired
+                statusCode: 410
+
+  /api/stats/{shortCode}:
+    get:
+      tags:
+        - Analytics
+      summary: Get URL statistics
+      description: |
+        Retrieve analytics and metadata for a short URL including visit count,
+        creation time, and expiration status.
+      operationId: getStats
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          description: The short code identifier
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: abc123
+      responses:
+        '200':
+          description: URL statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+              example:
+                shortCode: abc123
+                originalUrl: https://example.com/long/path
+                visitCount: 42
+                createdAt: 1699564800000
+                expiresAt: 1699651200000
+                customCode: false
+                isExpired: false
+        '404':
+          description: Short URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Not Found
+                message: Short URL 'xyz789' not found
+                statusCode: 404
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check the health status of the service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                timestamp: 1699564800000
+                version: 1.0.0
+                environment: production
+
+components:
+  schemas:
+    ShortenRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          format: uri
+          description: The URL to shorten (must be HTTP or HTTPS)
+          minLength: 1
+          maxLength: 2048
+          example: https://example.com/very/long/path/to/resource
+        customCode:
+          type: string
+          description: Optional custom short code (3-20 characters, alphanumeric, hyphens, underscores)
+          pattern: '^[a-zA-Z0-9_-]{3,20}$'
+          example: my-link
+        expiresIn:
+          type: integer
+          description: Optional expiration time in seconds from now (0 or omit for no expiration)
+          minimum: 0
+          example: 86400
+
+    ShortenResponse:
+      type: object
+      required:
+        - shortCode
+        - shortUrl
+        - originalUrl
+        - createdAt
+      properties:
+        shortCode:
+          type: string
+          description: The generated or custom short code
+          example: abc123
+        shortUrl:
+          type: string
+          format: uri
+          description: The complete short URL
+          example: https://short.link/abc123
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL
+          example: https://example.com/very/long/path
+        createdAt:
+          type: integer
+          format: int64
+          description: Creation timestamp (Unix milliseconds)
+          example: 1699564800000
+        expiresAt:
+          type: integer
+          format: int64
+          description: Expiration timestamp (Unix milliseconds), omitted if no expiration
+          example: 1699651200000
+
+    StatsResponse:
+      type: object
+      required:
+        - shortCode
+        - originalUrl
+        - visitCount
+        - createdAt
+        - customCode
+        - isExpired
+      properties:
+        shortCode:
+          type: string
+          description: The short code identifier
+          example: abc123
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL
+          example: https://example.com/long/path
+        visitCount:
+          type: integer
+          description: Number of times this URL has been accessed
+          example: 42
+        createdAt:
+          type: integer
+          format: int64
+          description: Creation timestamp (Unix milliseconds)
+          example: 1699564800000
+        expiresAt:
+          type: integer
+          format: int64
+          description: Expiration timestamp (Unix milliseconds), omitted if no expiration
+          example: 1699651200000
+        customCode:
+          type: boolean
+          description: Whether this is a custom user-provided code
+          example: false
+        isExpired:
+          type: boolean
+          description: Whether the URL has expired
+          example: false
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+        - environment
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+          description: Health status of the service
+          example: ok
+        timestamp:
+          type: integer
+          format: int64
+          description: Current timestamp (Unix milliseconds)
+          example: 1699564800000
+        version:
+          type: string
+          description: Service version
+          example: 1.0.0
+        environment:
+          type: string
+          description: Deployment environment
+          enum: [development, production]
+          example: production
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - statusCode
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: Bad Request
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid URL format
+        statusCode:
+          type: integer
+          description: HTTP status code
+          example: 400
+        details:
+          type: object
+          description: Optional additional error details
+          additionalProperties: true
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key authentication (optional, for future use)
+
+security: []  # No authentication required currently
