@@ -100,7 +100,6 @@ Reviews dependency changes in PRs.
 **Features:**
 - Checks for vulnerable dependencies in PRs
 - Fails on moderate+ severity vulnerabilities
-- Blocks problematic licenses (AGPL)
 - Adds review comments to PRs automatically
 
 ## Required Secrets
@@ -271,9 +270,6 @@ If a production deployment causes issues:
 4. **CodeQL Analysis**
    - Static analysis for code vulnerabilities
    - Runs weekly and on PRs
-
-5. **License Compliance**
-   - Blocks AGPL and incompatible licenses
 
 ### Security Best Practices
 
