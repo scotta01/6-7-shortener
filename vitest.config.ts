@@ -6,6 +6,12 @@ export default defineWorkersConfig({
     poolOptions: {
       workers: {
         wrangler: { configPath: "./wrangler.toml" },
+        singleWorker: true,
+        isolatedStorage: false,
+        miniflare: {
+          // Disable worker threads to avoid path resolution issues on Windows
+          compatibilityFlags: ["nodejs_compat"],
+        },
       },
     },
   },
